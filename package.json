@@ -1,0 +1,24 @@
+{
+  "name": "snapd-control",
+  "version": "0.0.1",
+  "description": "Snap daemon NodeJS client",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "nyc mocha"
+  },
+  "keywords": [
+    "snap",
+    "daemon",
+    "snapd",
+    "snapcraft",
+    "snapd-control"
+  ],
+  "author": "Clément Dandrieux",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
+    "nyc": "^13.2.0",
+    "sinon": "^7.2.3"
+  }
+}

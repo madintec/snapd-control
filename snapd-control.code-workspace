@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"licenser.author": "Clément Dandrieux",
+		"licenser.license": "MIT",
+		"licenser.projectName": "snapd-control"
+	}
+}
