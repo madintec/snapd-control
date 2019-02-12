@@ -28,7 +28,7 @@ class Snapd {
         return new Promise((resolve, reject) => {
             const req = http.request({
                 socketPath: this.socketPath,
-                method: options.method,
+                ...options,
                 path: `/v${this.version}/${path}`
             }, response => {
                 response.setEncoding(this.encoding)

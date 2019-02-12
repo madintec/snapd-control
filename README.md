@@ -22,4 +22,5 @@ snap.info('gitkraken')
 
 ## License
 
+Copyright (c) 2019 Clément Dandrieux, [madintec.com](https://madintec.com)
 This program is released under the [MIT license](./LICENSE).
