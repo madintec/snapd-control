@@ -26,7 +26,7 @@ class Snapd {
 
     request(path, body, options=defaultOptions){
         return new Promise((resolve, reject) => {
-            const req = http.request({
+            let req = http.request({
                 socketPath: this.socketPath,
                 ...options,
                 path: `/v${this.version}/${path}`
@@ -51,6 +51,8 @@ class Snapd {
                 req.write(
                     JSON.stringify(body)
                 )
+            } else if(typeof options.requestHook === 'function') {
+                return options.requestHook(req)
             }
 
             req.end()
