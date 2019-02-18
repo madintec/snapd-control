@@ -25,10 +25,11 @@ class Snapd {
     }
 
     request(path, body, options=defaultOptions){
+        const {requestHook, ...opts} = options
         return new Promise((resolve, reject) => {
             let req = http.request({
                 socketPath: this.socketPath,
-                ...options,
+                ...opts,
                 path: `/v${this.version}/${path}`
             }, response => {
                 response.setEncoding(this.encoding)
@@ -51,8 +52,8 @@ class Snapd {
                 req.write(
                     JSON.stringify(body)
                 )
-            } else if(typeof options.requestHook === 'function') {
-                return options.requestHook(req)
+            } else if(typeof requestHook === 'function') {
+                return requestHook(req)
             }
 
             req.end()
