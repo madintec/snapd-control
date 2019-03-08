@@ -27,8 +27,19 @@ describe('Snapd', () => {
         
         it('should return a promise', () => {
             const snap = new Snapd()
+            const expected = { hello: 'world' }
+            const response = new PassThrough()
+            const request = new PassThrough()
+            sinon.replace(http, 'request', sinon.fake.returns(request))
+            response.write(JSON.stringify(expected))
+            response.end()
+            
+            
+            
             expect(snap.request())
                 .to.be.a('promise')
+            
+            http.request.getCall(0).lastArg(response)
         })
         
         it('should reject on transfer error', function(done) {
