@@ -284,19 +284,19 @@ describe('Snapd', () => {
 
     describe('Snapd->connect', () => {
 
-        it('should call interfaces with array plugs and slots args', done => {
+        it('should call requesr with array plugs and slots args', done => {
             const snap = new Snapd()
 
             const slots = ['hello', 'slots']
             const plugs = ['hello', 'plugs']
 
-            sinon.replace(snap, 'interfaces', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
 
             snap.connect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.interfaces.calledWith({
+            assert(snap.request.calledWith('interfaces', {
                 action: 'connect',
                 slots,
                 plugs
@@ -310,13 +310,13 @@ describe('Snapd', () => {
             const slots = 'slots'
             const plugs = 'plugs'
 
-            sinon.replace(snap, 'interfaces', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
 
             snap.connect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.interfaces.calledWith({
+            assert(snap.request.calledWith('interfaces', {
                 action: 'connect',
                 slots: [slots],
                 plugs: [plugs]
@@ -334,13 +334,13 @@ describe('Snapd', () => {
             const slots = ['hello', 'slots']
             const plugs = ['hello', 'plugs']
 
-            sinon.replace(snap, 'interfaces', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
 
             snap.disconnect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.interfaces.calledWith({
+            assert(snap.request.calledWith('interfaces', {
                 action: 'disconnect',
                 slots,
                 plugs
@@ -354,13 +354,13 @@ describe('Snapd', () => {
             const slots = 'slots'
             const plugs = 'plugs'
 
-            sinon.replace(snap, 'interfaces', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
 
             snap.disconnect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.interfaces.calledWith({
+            assert(snap.request.calledWith('interfaces', {
                 action: 'disconnect',
                 slots: [slots],
                 plugs: [plugs]

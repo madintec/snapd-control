@@ -88,12 +88,14 @@ class Snapd {
 
     // Interfaces management
 
+    // Retirve interfaces list
     interfaces(options){
         return this.request('interfaces', options)
     }
 
+    // Connect plugs & slots
     connect(slots, plugs){
-        return this.interfaces({
+        return this.request('interfaces', {
             action: 'connect',
             slots: Array.isArray(slots) ? slots : [slots],
             plugs: Array.isArray(plugs) ? plugs : [plugs]
@@ -102,8 +104,9 @@ class Snapd {
         })
     }
 
+    // Disconnect plugs & slots
     disconnect(slots, plugs){
-        return this.interfaces({
+        return this.request('interfaces', {
             action: 'disconnect',
             slots: Array.isArray(slots) ? slots : [slots],
             plugs: Array.isArray(plugs) ? plugs : [plugs]
