@@ -3,7 +3,6 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-const http = require('http')
 const rp = require('request-promise-any')
 
 const defaultSettings = {
@@ -111,6 +110,74 @@ class Snapd {
                 plugs: Array.isArray(plugs) ? plugs : [plugs]
             }
         })
+    }
+
+    // Daemons control
+
+    // List available services
+    services(){
+        return this.request({
+            uri: 'apps',
+            qs: {
+                'select': 'service'
+            }
+        })
+    }
+
+    // Start a service
+    start(service){
+        return this.request({
+            uri: 'apps',
+            method: 'POST',
+            body: {
+                action: 'start',
+                names: Array.isArray(service) ? service : [service]
+            }
+        })
+    }
+
+    // Stop a service
+    stop(service){
+        return this.request({
+            uri: 'apps',
+            method: 'POST',
+            body: {
+                action: 'stop',
+                names: Array.isArray(service) ? service : [service]
+            }
+        })
+    }
+
+    // Restart a service
+    restart(service){
+        return this.request({
+            uri: 'apps',
+            method: 'POST',
+            body: {
+                action: 'restart',
+                names: Array.isArray(service) ? service : [service]
+            }
+        })
+    }
+
+    // Get service logs
+    logs(options){
+        if(typeof options === 'string') {
+            return this.request({
+                uri: 'logs',
+                qs: {
+                    names: options
+                }
+            })
+        } else {
+            return this.request({
+                uri: 'logs',
+                qs: {
+                    names: options.names,
+                    n: options.n,
+                }
+            })
+        }
     }
 
     
