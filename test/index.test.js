@@ -4,9 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 const { expect, assert } = require('chai')
-const EventEmitter = require('events')
-const { PassThrough } = require('stream')
-const http = require('http')
+const rp = require('request-promise-any')
 const sinon = require('sinon')
 const Snapd = require('../src/index')
 
@@ -18,141 +16,76 @@ afterEach(() => {
 
 describe('Snapd', () => {
 
-    describe('Snapd->request', () => {
+    describe('Snapd -> constructor', () => {
+
+        it('should be a function', () => {
+            expect(Snapd.prototype.constructor).to.be.a('function')
+        })
+
+        it('should pre-configure request', () => {
+            const fakeReq = sinon.fake()
+            sinon.replace(rp, 'defaults', fakeReq)
+
+            // Some custom settings
+            const settings = {
+                socketPath: '/path/to/socket',
+                version: 3
+            }
+
+            // Corresponding baseUrl
+            const baseUrl = 'http://unix:/path/to/socket:/v3/'
+
+            const snap = new Snapd(settings)
+
+            expect(fakeReq.callCount).to.equal(1)
+            expect(fakeReq.lastCall.args.length).to.equal(1)
+            expect(fakeReq.lastCall.args[0]).to.eql({
+                baseUrl,
+                headers: {
+                    'Host': ''
+                },
+                json: true,
+                simple: false,
+                transform: snap._handleResponse
+            })
+        })
+    })
+
+    describe('Snapd -> _handleResponse', () => {
 
         it('should be a function', () => {
             const snap = new Snapd()
-            expect(snap.request).to.be.a('function')
+            expect(snap._handleResponse).to.be.a('function')
         })
-        
-        it('should return a promise', () => {
+
+        it('should throw when response type is error', () => {
             const snap = new Snapd()
-            const expected = { hello: 'world' }
-            const response = new PassThrough()
-            const request = new PassThrough()
-            sinon.replace(http, 'request', sinon.fake.returns(request))
-            response.write(JSON.stringify(expected))
-            response.end()
-            
-            
-            
-            expect(snap.request())
-                .to.be.a('promise')
-            
-            http.request.getCall(0).lastArg(response)
-        })
-        
-        it('should reject on transfer error', function(done) {
-            const snap = new Snapd()
-            const response = new PassThrough()
-            const request = new PassThrough()
-            const error = new Error('Transfer error')
-            sinon.replace(http, 'request', sinon.fake.returns(request))
-         
-         
-            
-            snap.request()
-            .then(() => done(new Error('Should not succeed')))
-            .catch(err => {
-                try {
-                    expect(err).to.eql(error)
-                    done()
-                } catch (error) {
-                    done(error)
+
+            const errorMessage = 'Some random error message'
+
+            expect(() => snap._handleResponse({
+                type: 'error',
+                result: {
+                    message: errorMessage
                 }
-            })
-            http.request.getCall(0).lastArg(response)
-            response.emit('error', error)
-            response.end()
+            })).to.throw(errorMessage)
         })
 
-        it('should convert the response to object', function(done) {
+        it('should return the whole response body', () => {
             const snap = new Snapd()
-            const expected = { hello: 'world' }
-            const response = new PassThrough()
-            const request = new PassThrough()
-            sinon.replace(http, 'request', sinon.fake.returns(request))
-            response.write(JSON.stringify(expected))
-            response.end()
-         
-         
-            
-            snap.request()
-            .then(result => {
-                expect(result).to.eql(expected)
-                done()
-            })
-            http.request.getCall(0).lastArg(response)
+
+            const body = {
+                type: 'sync',
+                result: {
+                    data: 'some data'
+                }
+            }
+
+            expect(snap._handleResponse(body))
+                .to.equal(body)
         })
-
-        it('should throw an error on invalid JSON response', (done) => {
-            const snap = new Snapd()
-            const response = new PassThrough()
-            const request = new PassThrough()
-            sinon.replace(http, 'request', sinon.fake.returns(request))
-            response.write('Some invalid JSON')
-            response.end()
-         
-         
-            
-            snap.request()
-            .then(() => done(new Error('Should not resolve')))
-            .catch(() => {
-                done()
-            })
-            http.request.getCall(0).lastArg(response)
-        })
-
-
-        it('should override http method with last arg', function(done) {
-            const snap = new Snapd()
-            const expected = { hello: 'world' }
-            const response = new PassThrough()
-            const request = new PassThrough()
-            sinon.replace(http, 'request', sinon.fake.returns(request))
-            response.write(JSON.stringify({hello: 'world'}))
-            response.end()
-         
-         
-            
-            snap.request('some-path', null, {method: 'POST'})
-            .then(() => done())
-            .catch(done)
-
-            expect(http.request.getCall(0).args[0])
-                .to.have.property('method', 'POST')
-
-            http.request.getCall(0).lastArg(response)
-        })
-
-        it('should write second arg as request body', function(done) {
-            const snap = new Snapd()
-            const body = { hello: 'world' }
-            const response = new PassThrough()
-            const request = new PassThrough()
-
-            let reqData = ''
-            request.on('data', d => reqData+=d)
-            request.once('end', () => {
-                expect(reqData).to.eql(
-                    JSON.stringify(body)
-                )
-            })
-
-            sinon.replace(http, 'request', sinon.fake.returns(request))
-            response.write(JSON.stringify({hello: 'world'}))
-            response.end()
-         
-         
-            
-            snap.request('some-path', body)
-            .then(() => done())
-            .catch(done)
-
-            http.request.getCall(0).lastArg(response)
-        })
-
     })
+
 
     describe('Snapd->systemInfo', () => {
 
@@ -165,7 +98,9 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('system-info'))
+            assert(snap.request.calledWith({
+                uri: 'system-info'
+            }))
 
         })
 
@@ -178,14 +113,12 @@ describe('Snapd', () => {
 
             sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
 
-            const body = {hello: 'world'}
-            const options = {method: 'POST'}
-
-            snap.changes(0, body, options)
+            snap.changes(0)
                 .then(done)
                 .catch(done)
-            console.log(snap.request.getCall(0).args)
-            assert(snap.request.calledWith('changes/0', body, options))
+            assert(snap.request.calledWith({
+                uri: 'changes/0'
+            }))
 
         })
 
@@ -198,7 +131,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('changes'))
+            assert(snap.request.calledWith({uri: 'changes'}))
 
         })
 
@@ -209,7 +142,12 @@ describe('Snapd', () => {
         it('should call request with corrects args', done => {
             const snap = new Snapd()
 
-            const options = {}
+            const options = {
+                q: 'test',
+                name: 'test',
+                select: 'test',
+                section: 'test'
+            }
 
             sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
 
@@ -217,7 +155,10 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('find', options))
+            assert(snap.request.calledWith({
+                uri: 'find',
+                qs: options
+            }))
 
         })
 
@@ -236,7 +177,10 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('snaps', options))
+            assert(snap.request.calledWith({
+                uri: 'snaps',
+                ...options
+            }))
 
         })
 
@@ -253,20 +197,9 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('snaps/snapName'))
-
-        })
-
-        it('should call request with corrects args with no snap name', done => {
-            const snap = new Snapd()
-
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
-
-            snap.info()
-            .then(done)
-            .catch(done)
-
-            assert(snap.request.calledWith('snaps'))
+            assert(snap.request.calledWith({
+                uri: 'snaps/snapName'
+            }))
 
         })
 
@@ -279,15 +212,15 @@ describe('Snapd', () => {
         it('should call request with the right args', done => {
             const snap = new Snapd()
 
-            const body = {hello: 'world'}
-
             sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
 
-            snap.interfaces(body)
+            snap.interfaces()
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('interfaces', body))
+            assert(snap.request.calledWith({
+                uri: 'interfaces'
+            }))
 
         })
 
@@ -295,7 +228,7 @@ describe('Snapd', () => {
 
     describe('Snapd->connect', () => {
 
-        it('should call requesr with array plugs and slots args', done => {
+        it('should call request with array plugs and slots args', done => {
             const snap = new Snapd()
 
             const slots = ['hello', 'slots']
@@ -307,11 +240,15 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('interfaces', {
-                action: 'connect',
-                slots,
-                plugs
-            }, { method: 'POST' }))
+            assert(snap.request.calledWith({
+                uri: 'interfaces',
+                method: 'POST',
+                body: {
+                    action: 'connect',
+                    slots,
+                    plugs
+                }
+            }))
 
         })
 
@@ -327,11 +264,15 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('interfaces', {
-                action: 'connect',
-                slots: [slots],
-                plugs: [plugs]
-            }, { method: 'POST' }))
+            assert(snap.request.calledWith({
+                uri: 'interfaces',
+                method: 'POST',
+                body: {
+                    action: 'connect',
+                    slots: [slots],
+                    plugs: [plugs]
+                }
+            }))
 
         })
 
@@ -351,11 +292,15 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('interfaces', {
-                action: 'disconnect',
-                slots,
-                plugs
-            }, { method: 'POST' }))
+            assert(snap.request.calledWith({
+                uri: 'interfaces',
+                method: 'POST',
+                body: {
+                    action: 'disconnect',
+                    slots,
+                    plugs
+                }
+            }))
 
         })
 
@@ -371,14 +316,246 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith('interfaces', {
-                action: 'disconnect',
-                slots: [slots],
-                plugs: [plugs]
-            }, { method: 'POST' }))
+            assert(snap.request.calledWith({
+                uri: 'interfaces',
+                method: 'POST',
+                body: {
+                    action: 'disconnect',
+                    slots: [slots],
+                    plugs: [plugs]
+                }
+            }))
 
         })
 
     })
+
+
+    describe('Snapd->services', () => {
+
+        it('should call request with correct args', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            snap.services()
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                qs: {
+                    select: 'service'
+                }
+            }))
+
+        })
+
+    })
+
+    describe('Snapd->start', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.start(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'start',
+                    names: [serviceName]
+                }
+            }))
+
+        })
+
+        it('should call request with an array of service names', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceNames = [
+                'some-snap.some-daemon',
+                'some-other-snap.some-daemon'
+            ]
+
+            snap.start(serviceNames)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'start',
+                    names: serviceNames
+                }
+            }))
+
+        })
+
+    })
+
+    describe('Snapd->stop', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.stop(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'stop',
+                    names: [serviceName]
+                }
+            }))
+
+        })
+
+        it('should call request with an array of service names', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceNames = [
+                'some-snap.some-daemon',
+                'some-other-snap.some-daemon'
+            ]
+
+            snap.stop(serviceNames)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'stop',
+                    names: serviceNames
+                }
+            }))
+
+        })
+
+    })
+
+    describe('Snapd->restart', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.restart(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'restart',
+                    names: [serviceName]
+                }
+            }))
+
+        })
+
+        it('should call request with an array of service names', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceNames = [
+                'some-snap.some-daemon',
+                'some-other-snap.some-daemon'
+            ]
+
+            snap.restart(serviceNames)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'restart',
+                    names: serviceNames
+                }
+            }))
+
+        })
+
+    })
+
+
+    describe('Snapd->logs', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.logs(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'logs',
+                qs: {
+                    names: serviceName
+                }
+            }))
+
+        })
+
+        it('should call request with options', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const options = {
+                names: 'some-snap.some-daemon',
+                n: 100,
+                nonexistantOption: true
+            }
+
+            snap.logs(options)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'logs',
+                qs: {
+                    names: options.names,
+                    n: options.n
+                }
+            }))
+
+        })
+
+    })
+
+
 
 })
