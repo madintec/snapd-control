@@ -4,114 +4,112 @@
 // https://opensource.org/licenses/MIT
 
 const http = require('http')
+const rp = require('request-promise-any')
 
 const defaultSettings = {
     socketPath: '/run/snapd.socket',
-    encoding: 'utf8',
     version: '2'
-}
-
-const defaultOptions = {
-    method: 'GET'
 }
 
 class Snapd {
     constructor(settings=defaultSettings){
 
-        this.socketPath = settings.socketPath
-        this.encoding = settings.encoding
-        this.version = settings.version
-
+        // Pre-configure request function
+        this.request = rp.defaults({
+            baseUrl: `http://unix:${settings.socketPath}:/v${settings.version}/`,
+            headers: {
+                'Host': ''
+            },
+            json: true,
+            simple: false,
+            transform: this._handleResponse
+        })
     }
 
-    request(path, body, options=defaultOptions){
-        const {requestHook, ...opts} = options
-        return new Promise((resolve, reject) => {
-            let req = http.request({
-                socketPath: this.socketPath,
-                ...opts,
-                path: `/v${this.version}/${path}`
-            }, response => {
-                response.setEncoding(this.encoding)
-                let raw = ''
-                response.on('data', d => raw+=d)
-                response.on('error', err => reject(err))
-                response.once('end', () => {
-                    response.removeAllListeners()
-                    try {
-                        return resolve(
-                            JSON.parse(raw)
-                        )
-                    } catch (err) {
-                        return reject(err)
-                    }
-                })
-            })
-
-            if(body){
-                req.write(
-                    JSON.stringify(body)
-                )
-            } else if(typeof requestHook === 'function') {
-                return requestHook(req)
-            }
-
-            req.end()
-        })
+    // Simply throw on snap response error
+    _handleResponse(body){
+        if(body.type === 'error'){
+            throw new Error(body.result.message)
+        } else {
+            return body
+        }
     }
 
     // Shorthand methods
 
     // Change method is to be used for async requests
-
-    changes(id, body, options){
-        return this.request(`changes${typeof id !== 'undefined' ? '/'+id : ''}`, body, options)
+    changes(id){
+        return this.request({
+            uri: `changes${typeof id !== 'undefined' ? '/'+id : ''}`
+        })
     }
 
     systemInfo(){
-        return this.request('system-info')
+        return this.request({
+            uri: 'system-info'
+        })
     }
 
-    find(options){
-        return this.request('find', options)
+    find({
+        q,
+        name,
+        section,
+        select,
+    }){
+        return this.request({
+            uri: 'find',
+            qs: {
+                q, name, section, select
+            }
+        })
     }
 
-    list(options){
-        return this.request('snaps', options)
+    list(){
+        return this.request({
+            uri: 'snaps'
+        })
     }
 
     // Snap management
 
     info(snap){
-        return this.request(`snaps${snap ? '/'+snap : ''}`)
+        return this.request({
+            uri: `snaps/${snap}`
+        })
     }
 
     // Interfaces management
 
-    // Retirve interfaces list
-    interfaces(options){
-        return this.request('interfaces', options)
+    // Retrieve interfaces list
+    interfaces(){
+        return this.request({
+            uri: 'interfaces'
+        })
     }
 
     // Connect plugs & slots
     connect(slots, plugs){
-        return this.request('interfaces', {
-            action: 'connect',
-            slots: Array.isArray(slots) ? slots : [slots],
-            plugs: Array.isArray(plugs) ? plugs : [plugs]
-        }, {
-            method: 'POST'
+        return this.request({
+            uri: 'interfaces',
+            method: 'POST',
+            body: {
+                action: 'connect',
+                slots: Array.isArray(slots) ? slots : [slots],
+                plugs: Array.isArray(plugs) ? plugs : [plugs]
+            }
         })
     }
 
     // Disconnect plugs & slots
     disconnect(slots, plugs){
-        return this.request('interfaces', {
-            action: 'disconnect',
-            slots: Array.isArray(slots) ? slots : [slots],
-            plugs: Array.isArray(plugs) ? plugs : [plugs]
-        }, {
-            method: 'POST'
+        return this.request({
+            uri: 'interfaces',
+            method: 'POST',
+            body: {
+                action: 'disconnect',
+                slots: Array.isArray(slots) ? slots : [slots],
+                plugs: Array.isArray(plugs) ? plugs : [plugs]
+            }
         })
     }
 
