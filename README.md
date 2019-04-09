@@ -6,6 +6,14 @@ There is currently no external HTTPS over TCP socket support, so the default set
 
 ## Usage
 
+### Install
+
+There is currently no NPM package, so install this library by running :
+
+```bash
+npm install --save https://github.com/madintec/snapd-control.git
+```
+
 ### Getting started
 
 ```js
@@ -27,4 +35,5 @@ See [HACKING](HACKING.md)
 ## License
 
 Copyright (c) 2019 Clément Dandrieux, [madintec.com](https://madintec.com)
+
 This program is released under the [MIT license](./LICENSE).
