@@ -20,6 +20,10 @@ snap.info('gitkraken')
 // Will log a JS object containing snap informations
 ```
 
+## Hacking
+
+See [HACKING](HACKING.md)
+
 ## License
 
 Copyright (c) 2019 Clément Dandrieux, [madintec.com](https://madintec.com)
