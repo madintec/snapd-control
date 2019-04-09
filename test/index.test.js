@@ -228,7 +228,7 @@ describe('Snapd', () => {
 
     describe('Snapd->connect', () => {
 
-        it('should call requesr with array plugs and slots args', done => {
+        it('should call request with array plugs and slots args', done => {
             const snap = new Snapd()
 
             const slots = ['hello', 'slots']
@@ -329,5 +329,233 @@ describe('Snapd', () => {
         })
 
     })
+
+
+    describe('Snapd->services', () => {
+
+        it('should call request with correct args', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            snap.services()
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                qs: {
+                    select: 'service'
+                }
+            }))
+
+        })
+
+    })
+
+    describe('Snapd->start', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.start(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'start',
+                    names: [serviceName]
+                }
+            }))
+
+        })
+
+        it('should call request with an array of service names', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceNames = [
+                'some-snap.some-daemon',
+                'some-other-snap.some-daemon'
+            ]
+
+            snap.start(serviceNames)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'start',
+                    names: serviceNames
+                }
+            }))
+
+        })
+
+    })
+
+    describe('Snapd->stop', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.stop(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'stop',
+                    names: [serviceName]
+                }
+            }))
+
+        })
+
+        it('should call request with an array of service names', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceNames = [
+                'some-snap.some-daemon',
+                'some-other-snap.some-daemon'
+            ]
+
+            snap.stop(serviceNames)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'stop',
+                    names: serviceNames
+                }
+            }))
+
+        })
+
+    })
+
+    describe('Snapd->restart', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.restart(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'restart',
+                    names: [serviceName]
+                }
+            }))
+
+        })
+
+        it('should call request with an array of service names', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceNames = [
+                'some-snap.some-daemon',
+                'some-other-snap.some-daemon'
+            ]
+
+            snap.restart(serviceNames)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'apps',
+                method: 'POST',
+                body: {
+                    action: 'restart',
+                    names: serviceNames
+                }
+            }))
+
+        })
+
+    })
+
+
+    describe('Snapd->logs', () => {
+
+        it('should call request with simple service name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const serviceName = 'some-snap.some-daemon'
+
+            snap.logs(serviceName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'logs',
+                qs: {
+                    names: serviceName
+                }
+            }))
+
+        })
+
+        it('should call request with options', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const options = {
+                names: 'some-snap.some-daemon',
+                n: 100,
+                nonexistantOption: true
+            }
+
+            snap.logs(options)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'logs',
+                qs: {
+                    names: options.names,
+                    n: options.n
+                }
+            }))
+
+        })
+
+    })
+
+
 
 })
