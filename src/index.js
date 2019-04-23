@@ -180,6 +180,47 @@ class Snapd {
         }
     }
 
+    install(snap, options){
+
+        // Use traditionnal snap store if snap argument is a string
+        if(typeof snap === 'string'){
+
+            return this.request({
+                uri: `snaps/${snap}`,
+                method: 'POST',
+                body: {
+                    action: 'install',
+                    channel: options.channel
+                }
+            })
+
+        // Try to sideload snap in form data otherwise
+        } else {
+
+            return this.request({
+                uri: 'snaps',
+                method: 'POST',
+                formData: {
+                    action: 'install',
+                    snap: {
+                        value: snap,
+                        options: {
+                            filename: options.filename,
+                        }
+                    },
+                    'snap-path': options.snapPath,
+
+                    // FormData doesn't like booleans
+                    devmode: options.devmode ? 'true' : undefined,
+                    dangerous: options.dangerous ? 'true' : undefined,
+                    classic: options.classic ? 'true' : undefined,
+                    jailmode: options.jailmode ? 'true' : undefined,
+                }
+            })
+
+        }
+    }
+
     
 }
 
