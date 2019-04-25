@@ -180,7 +180,7 @@ class Snapd {
         }
     }
 
-    install(snap, options){
+    install(snap, options={}){
 
         // Use traditionnal snap store if snap argument is a string
         if(typeof snap === 'string'){
@@ -219,6 +219,57 @@ class Snapd {
             })
 
         }
+    }
+
+    refresh(name, options={}){
+        return this.request({
+            uri: `snaps/${name}`,
+            method: 'POST',
+            body: {
+                action: 'refresh',
+                channel: options.channel
+            }
+        })
+    }
+
+    remove(name){
+        return this.request({
+            uri: `snaps/${name}`,
+            method: 'POST',
+            body: {
+                action: 'remove'
+            }
+        })
+    }
+
+    revert(name){
+        return this.request({
+            uri: `snaps/${name}`,
+            method: 'POST',
+            body: {
+                action: 'revert'
+            }
+        })
+    }
+
+    enable(name){
+        return this.request({
+            uri: `snaps/${name}`,
+            method: 'POST',
+            body: {
+                action: 'enable'
+            }
+        })
+    }
+
+    disable(name){
+        return this.request({
+            uri: `snaps/${name}`,
+            method: 'POST',
+            body: {
+                action: 'disable'
+            }
+        })
     }
 
     
