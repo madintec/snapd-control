@@ -6,7 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased](https://github.com/madintec/snapd-control/tree/develop)
 
-## [0.1.0](https://github.com/madintec/snapd-control/releases/tag/v0.0.1) - 2019-04-09
+## [0.2.0](https://github.com/madintec/snapd-control/releases/tag/v0.2.0) - 2019-04-25
+### Added
+- Commands
+  - install
+  - remove
+  - refresh
+  - revert
+  - enable
+  - disable
+- Unit tests for new commands
+
+## [0.1.0](https://github.com/madintec/snapd-control/releases/tag/v0.1.0) - 2019-04-09
 ### Added
 - Initial project structure
 - Travis CI
