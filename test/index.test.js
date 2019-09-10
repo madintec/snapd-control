@@ -776,7 +776,38 @@ describe('Snapd', () => {
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
-                    action: 'revert'
+                    action: 'revert',
+                    revision: undefined,
+                    channel: undefined
+                }
+            }))
+
+        })
+
+        it('should use the given options', done => {
+
+            const snapName = 'some-snap-name'
+
+            const options = {
+                revision: 'x2',
+                channel: 'stable'
+            }
+
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            snap.revert(snapName, options)
+                .then(done)
+                .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps/some-snap-name',
+                method: 'POST',
+                body: {
+                    action: 'revert',
+                    revision: 'x2',
+                    channel: 'stable'
                 }
             }))
 
