@@ -168,7 +168,7 @@ describe('Snapd', () => {
 
     describe('Snapd->list', () => {
 
-        it('should call request with corrects args', done => {
+        it('should call request with no options', done => {
             const snap = new Snapd()
 
             const options = {}
@@ -181,7 +181,79 @@ describe('Snapd', () => {
 
             assert(snap.request.calledWith({
                 uri: 'snaps',
-                ...options
+                qs: {
+                    select: undefined,
+                    snaps: undefined
+                }
+            }))
+
+        })
+
+        it('should take snaps string option with one snap name', done => {
+            const snap = new Snapd()
+
+            const options = {
+                snaps: 'snap-name'
+            }
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            snap.list(options)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps',
+                qs: {
+                    select: undefined,
+                    snaps: options.snaps
+                }
+            }))
+
+        })
+
+        it('should take snaps array option', done => {
+            const snap = new Snapd()
+
+            const options = {
+                snaps: ['snap-name', 'other-snap-name']
+            }
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            snap.list(options)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps',
+                qs: {
+                    select: undefined,
+                    snaps: 'snap-name,other-snap-name'
+                }
+            }))
+
+        })
+
+        it('should take select option', done => {
+            const snap = new Snapd()
+
+            const options = {
+                select: 'all'
+            }
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            snap.list(options)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps',
+                qs: {
+                    select: options.select,
+                    snaps: undefined
+                }
             }))
 
         })
