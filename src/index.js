@@ -242,12 +242,14 @@ class Snapd {
         })
     }
 
-    revert(name){
+    revert(name, options={}){
         return this.request({
             uri: `snaps/${name}`,
             method: 'POST',
             body: {
-                action: 'revert'
+                action: 'revert',
+                revision: options.revision,
+                channel: options.channel
             }
         })
     }
