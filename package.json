@@ -2,6 +2,10 @@
   "name": "snapd-control",
   "version": "0.2.0",
   "description": "Snap daemon NodeJS client",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/madintec/snapd-control.git"
+  },
   "main": "src/index.js",
   "scripts": {
     "test": "nyc --reporter=lcov mocha"
@@ -18,7 +22,7 @@
   "devDependencies": {
     "chai": "^4.2.0",
     "mocha": "^5.2.0",
-    "nyc": "^13.3.0",
+    "nyc": "^14.1.1",
     "sinon": "^7.2.3"
   },
   "dependencies": {
