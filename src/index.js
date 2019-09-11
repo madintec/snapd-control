@@ -7,17 +7,23 @@ const rp = require('request-promise-any')
 
 const defaultSettings = {
     socketPath: '/run/snapd.socket',
-    version: '2'
+    version: '2',
+    allowInteraction: false
 }
 
 class Snapd {
-    constructor(settings=defaultSettings){
+    constructor(settings){
+        this.settings = {
+            ...defaultSettings,
+            ...settings
+        }
 
         // Pre-configure request function
         this.request = rp.defaults({
-            baseUrl: `http://unix:${settings.socketPath}:/v${settings.version}/`,
+            baseUrl: `http://unix:${this.settings.socketPath}:/v${this.settings.version}/`,
             headers: {
-                'Host': ''
+                'Host': '',
+                'X-Allow-Interaction': this.settings.allowInteraction
             },
             json: true,
             simple: false,
