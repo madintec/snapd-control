@@ -31,7 +31,8 @@ describe('Snapd', () => {
             // Some custom settings
             const settings = {
                 socketPath: '/path/to/socket',
-                version: 3
+                version: 3,
+                allowInteraction: false
             }
 
             // Corresponding baseUrl
@@ -44,7 +45,8 @@ describe('Snapd', () => {
             expect(fakeReq.lastCall.args[0]).to.eql({
                 baseUrl,
                 headers: {
-                    'Host': ''
+                    'Host': '',
+                    'X-Allow-Interaction': settings.allowInteraction
                 },
                 json: true,
                 simple: false,
