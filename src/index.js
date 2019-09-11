@@ -63,9 +63,13 @@ class Snapd {
         })
     }
 
-    list(){
+    list(options={}){
         return this.request({
-            uri: 'snaps'
+            uri: 'snaps',
+            qs: {
+                select: options.select,
+                snaps: Array.isArray(options.snaps) ? options.snaps.join(',') : options.snaps
+            }
         })
     }
 
