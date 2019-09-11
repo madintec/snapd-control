@@ -274,6 +274,16 @@ class Snapd {
         })
     }
 
+    get(name, keys){
+        return this.request({
+            uri: `snaps/${name}/conf`,
+            method: 'GET',
+            qs: {
+                keys: Array.isArray(keys) ? keys.join(',') : keys
+            }
+        })
+    }
+
     
 }
 

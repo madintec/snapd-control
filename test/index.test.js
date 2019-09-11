@@ -862,4 +862,74 @@ describe('Snapd', () => {
         })
     })
 
+
+    // Test snap configuration methods
+
+    describe('Snapd->get', () => {
+        it('should call request with the given snap name', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const snapName = 'some-snap'
+
+            snap.get(snapName)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps/some-snap/conf',
+                method: 'GET',
+                qs: {
+                    keys: undefined
+                }
+            }))
+
+        })
+
+        it('should call request with a key string options', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const snapName = 'some-snap'
+            const keys = 'some-key'
+
+            snap.get(snapName, keys)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps/some-snap/conf',
+                method: 'GET',
+                qs: {
+                    keys
+                }
+            }))
+
+        })
+
+        it('should call request with a key string options', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const snapName = 'some-snap'
+            const keys = ['some-key', 'some.nested-key']
+
+            snap.get(snapName, keys)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps/some-snap/conf',
+                method: 'GET',
+                qs: {
+                    keys: 'some-key,some.nested-key'
+                }
+            }))
+
+        })
+    })
+    
 })
