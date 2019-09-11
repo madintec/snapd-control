@@ -909,7 +909,7 @@ describe('Snapd', () => {
 
         })
 
-        it('should call request with a key string options', done => {
+        it('should call request with an array keys options', done => {
             const snap = new Snapd()
 
             sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
@@ -930,6 +930,33 @@ describe('Snapd', () => {
             }))
 
         })
+    })
+
+    describe('Snapd->set', () => {
+        it('should take a snap name and it config', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const snapName = 'some-snap'
+
+            const config = {
+                'conf-key1': 'conf-value1',
+                'conf-key2': 'conf-value2'
+            }     
+
+            snap.set(snapName, config)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps/some-snap/conf',
+                method: 'PUT',
+                body: config           
+            }))
+
+        })
+
     })
     
 })
