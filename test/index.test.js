@@ -826,7 +826,37 @@ describe('Snapd', () => {
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
-                    action: 'remove'
+                    action: 'remove',
+                    purge: undefined,
+                    revision: undefined
+                }
+            }))
+
+        })
+
+        it('should use the given options', done => {
+            const snap = new Snapd()
+
+            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+
+            const snapName = 'some-snap'
+
+            const options = {
+                purge: true,
+                revision: 'x12'
+            }
+
+            snap.remove(snapName, options)
+            .then(done)
+            .catch(done)
+
+            assert(snap.request.calledWith({
+                uri: 'snaps/some-snap',
+                method: 'POST',
+                body: {
+                    action: 'remove',
+                    purge: options.purge,
+                    revision: options.revision
                 }
             }))
 
