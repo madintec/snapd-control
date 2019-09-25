@@ -242,12 +242,14 @@ class Snapd {
         })
     }
 
-    remove(name){
+    remove(name, options={}){
         return this.request({
             uri: `snaps/${name}`,
             method: 'POST',
             body: {
-                action: 'remove'
+                action: 'remove',
+                purge: options.purge,
+                revision: options.revision
             }
         })
     }
