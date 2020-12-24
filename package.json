@@ -8,7 +8,7 @@
   },
   "main": "src/index.js",
   "scripts": {
-    "test": "nyc --reporter=lcov mocha"
+    "test": "nyc --reporter=html mocha"
   },
   "keywords": [
     "snap",
@@ -26,7 +26,7 @@
     "sinon": "^7.2.3"
   },
   "dependencies": {
-    "request": "^2.88.0",
-    "request-promise-any": "^1.0.7"
+    "node-fetch": "^2.6.1",
+    "url-join": "^4.0.1"
   }
 }

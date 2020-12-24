@@ -4,12 +4,18 @@
 // https://opensource.org/licenses/MIT
 
 const { expect, assert } = require('chai')
-const rp = require('request-promise-any')
+const fetch = require('node-fetch')
 const sinon = require('sinon')
 const Snapd = require('../src/index')
 
+const http = require('http')
+
 const { Readable } = require('stream')
 
+
+const makeFakeFetch = value => sinon.fake.returns(Promise.resolve({
+    json: () => Promise.resolve(value)
+}))
 
 afterEach(() => {
     // Restore the default sandbox here
@@ -24,9 +30,9 @@ describe('Snapd', () => {
             expect(Snapd.prototype.constructor).to.be.a('function')
         })
 
-        it('should pre-configure request', () => {
-            const fakeReq = sinon.fake()
-            sinon.replace(rp, 'defaults', fakeReq)
+        it('should create an http agent with the path to the socket', () => {
+            const Agent = sinon.fake()
+            sinon.replace(http, 'Agent', Agent)
 
             // Some custom settings
             const settings = {
@@ -34,25 +40,72 @@ describe('Snapd', () => {
                 version: 3,
                 allowInteraction: false
             }
+            
+            new Snapd(settings)
 
-            // Corresponding baseUrl
-            const baseUrl = 'http://unix:/path/to/socket:/v3/'
+            expect(Agent.calledOnceWithExactly({
+                socketPath: settings.socketPath
+            }))
+        })
+
+        // it('should pre-configure request', () => {
+        //     const fetch = sinon.fake()
+        //     sinon.replace(fetch, fakeReq)
+
+        //     // Some custom settings
+        //     const settings = {
+        //         socketPath: '/path/to/socket',
+        //         version: 3,
+        //         allowInteraction: false
+        //     }
+
+        //     // Corresponding baseUrl
+        //     const baseUrl = 'http://unix:/path/to/socket:/v3/'
+
+        //     const snap = new Snapd(settings)
+
+        //     expect(fakeReq.callCount).to.equal(1)
+        //     expect(fakeReq.lastCall.args.length).to.equal(1)
+        //     expect(fakeReq.lastCall.args[0]).to.eql({
+        //         baseUrl,
+        //         headers: {
+        //             'Host': '',
+        //             'X-Allow-Interaction': settings.allowInteraction
+        //         },
+        //         json: true,
+        //         simple: false,
+        //         transform: snap._handleResponse
+        //     })
+        // })
+    })
+
+    describe('Snapd -> _request',  () => {
+
+        it('should be a function', () => {
+            const snap = new Snapd()
+            expect(snap._request).to.be.a('function')
+        })
+
+        it('should call fetch with the correct URL', done => {
+
+            const fakeFetch = makeFakeFetch({})
+            // Some custom settings
+            const settings = {
+                version: 3,
+                fetchFunction: fakeFetch
+            }
 
             const snap = new Snapd(settings)
 
-            expect(fakeReq.callCount).to.equal(1)
-            expect(fakeReq.lastCall.args.length).to.equal(1)
-            expect(fakeReq.lastCall.args[0]).to.eql({
-                baseUrl,
-                headers: {
-                    'Host': '',
-                    'X-Allow-Interaction': settings.allowInteraction
-                },
-                json: true,
-                simple: false,
-                transform: snap._handleResponse
+            snap._request({
+                uri: 'snap/whatever'
+            })
+            .then(() => {
+                expect(fakeFetch.calledOnceWith('http://0.0.0.0?snap/whatever'))
+                done()
             })
         })
+
     })
 
     describe('Snapd -> _handleResponse', () => {
@@ -96,13 +149,13 @@ describe('Snapd', () => {
         it('should call request with corrects args', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.systemInfo()
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'system-info'
             }))
 
@@ -115,12 +168,12 @@ describe('Snapd', () => {
         it('should call request with corrects args for a given id and options', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.changes(0)
                 .then(done)
                 .catch(done)
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'changes/0'
             }))
 
@@ -129,13 +182,13 @@ describe('Snapd', () => {
         it('should call request with corrects args with no args provided', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.changes()
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({uri: 'changes'}))
+            assert(snap._request.calledWith({uri: 'changes'}))
 
         })
 
@@ -153,13 +206,13 @@ describe('Snapd', () => {
                 section: 'test'
             }
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.find(options)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'find',
                 qs: options
             }))
@@ -175,18 +228,15 @@ describe('Snapd', () => {
 
             const options = {}
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.list(options)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps',
-                qs: {
-                    select: undefined,
-                    snaps: undefined
-                }
+                qs: {}
             }))
 
         })
@@ -198,16 +248,15 @@ describe('Snapd', () => {
                 snaps: 'snap-name'
             }
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.list(options)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps',
                 qs: {
-                    select: undefined,
                     snaps: options.snaps
                 }
             }))
@@ -221,16 +270,15 @@ describe('Snapd', () => {
                 snaps: ['snap-name', 'other-snap-name']
             }
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.list(options)
             .then(done)
             .catch(done)
-
-            assert(snap.request.calledWith({
+            
+            assert(snap._request.calledWith({
                 uri: 'snaps',
                 qs: {
-                    select: undefined,
                     snaps: 'snap-name,other-snap-name'
                 }
             }))
@@ -244,17 +292,16 @@ describe('Snapd', () => {
                 select: 'all'
             }
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.list(options)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps',
                 qs: {
-                    select: options.select,
-                    snaps: undefined
+                    select: options.select
                 }
             }))
 
@@ -267,13 +314,13 @@ describe('Snapd', () => {
         it('should call request with corrects args for a given name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.info('snapName')
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/snapName'
             }))
 
@@ -288,13 +335,13 @@ describe('Snapd', () => {
         it('should call request with the right args', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.interfaces()
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'interfaces'
             }))
 
@@ -310,13 +357,13 @@ describe('Snapd', () => {
             const slots = ['hello', 'slots']
             const plugs = ['hello', 'plugs']
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.connect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -334,13 +381,13 @@ describe('Snapd', () => {
             const slots = 'slots'
             const plugs = 'plugs'
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.connect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -362,13 +409,13 @@ describe('Snapd', () => {
             const slots = ['hello', 'slots']
             const plugs = ['hello', 'plugs']
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.disconnect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -386,13 +433,13 @@ describe('Snapd', () => {
             const slots = 'slots'
             const plugs = 'plugs'
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.disconnect(slots, plugs)
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -412,13 +459,13 @@ describe('Snapd', () => {
         it('should call request with correct args', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.services()
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'apps',
                 qs: {
                     select: 'service'
@@ -434,7 +481,7 @@ describe('Snapd', () => {
         it('should call request with simple service name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const serviceName = 'some-snap.some-daemon'
 
@@ -442,7 +489,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -456,7 +503,7 @@ describe('Snapd', () => {
         it('should call request with an array of service names', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const serviceNames = [
                 'some-snap.some-daemon',
@@ -467,7 +514,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -485,7 +532,7 @@ describe('Snapd', () => {
         it('should call request with simple service name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const serviceName = 'some-snap.some-daemon'
 
@@ -493,7 +540,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -507,7 +554,7 @@ describe('Snapd', () => {
         it('should call request with an array of service names', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const serviceNames = [
                 'some-snap.some-daemon',
@@ -518,7 +565,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -536,7 +583,7 @@ describe('Snapd', () => {
         it('should call request with simple service name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const serviceName = 'some-snap.some-daemon'
 
@@ -544,7 +591,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -558,7 +605,7 @@ describe('Snapd', () => {
         it('should call request with an array of service names', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const serviceNames = [
                 'some-snap.some-daemon',
@@ -569,7 +616,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -588,7 +635,7 @@ describe('Snapd', () => {
         it('should call request with simple service name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const serviceName = 'some-snap.some-daemon'
 
@@ -596,7 +643,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'logs',
                 qs: {
                     names: serviceName
@@ -608,7 +655,7 @@ describe('Snapd', () => {
         it('should call request with options', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const options = {
                 names: 'some-snap.some-daemon',
@@ -620,7 +667,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'logs',
                 qs: {
                     names: options.names,
@@ -637,7 +684,7 @@ describe('Snapd', () => {
         it('should call request with the given snap name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -645,7 +692,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -659,7 +706,7 @@ describe('Snapd', () => {
         it('should call request with the given channel', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
             const channel = 'candidate'
@@ -670,7 +717,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -684,7 +731,7 @@ describe('Snapd', () => {
         it('should call request with sideloaded snap', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapFile = new Readable()
 
@@ -696,7 +743,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps',
                 method: 'POST',
                 formData: {
@@ -720,7 +767,7 @@ describe('Snapd', () => {
         it('should convert truthy booleans to strings', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapFile = new Readable()
 
@@ -736,7 +783,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps',
                 method: 'POST',
                 formData: {
@@ -764,7 +811,7 @@ describe('Snapd', () => {
         it('should call request with the given snap name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -772,7 +819,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -786,7 +833,7 @@ describe('Snapd', () => {
         it('should call request with the given channel', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
             const channel = 'candidate'
@@ -797,7 +844,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -814,7 +861,7 @@ describe('Snapd', () => {
         it('should call request with the given snap name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -822,7 +869,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -837,7 +884,7 @@ describe('Snapd', () => {
         it('should use the given options', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -850,7 +897,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -868,7 +915,7 @@ describe('Snapd', () => {
         it('should call request with the given snap name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -876,7 +923,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -899,13 +946,13 @@ describe('Snapd', () => {
 
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             snap.revert(snapName, options)
                 .then(done)
                 .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap-name',
                 method: 'POST',
                 body: {
@@ -923,7 +970,7 @@ describe('Snapd', () => {
         it('should call request with the given snap name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -931,7 +978,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -947,7 +994,7 @@ describe('Snapd', () => {
         it('should call request with the given snap name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -955,7 +1002,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -973,7 +1020,7 @@ describe('Snapd', () => {
         it('should call request with the given snap name', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -981,7 +1028,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap/conf',
                 method: 'GET',
                 qs: {
@@ -994,7 +1041,7 @@ describe('Snapd', () => {
         it('should call request with a key string options', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
             const keys = 'some-key'
@@ -1003,7 +1050,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap/conf',
                 method: 'GET',
                 qs: {
@@ -1016,7 +1063,7 @@ describe('Snapd', () => {
         it('should call request with an array keys options', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
             const keys = ['some-key', 'some.nested-key']
@@ -1025,7 +1072,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap/conf',
                 method: 'GET',
                 qs: {
@@ -1040,7 +1087,7 @@ describe('Snapd', () => {
         it('should take a snap name and it config', done => {
             const snap = new Snapd()
 
-            sinon.replace(snap, 'request', sinon.fake.returns(Promise.resolve()))
+            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
             const snapName = 'some-snap'
 
@@ -1053,7 +1100,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap.request.calledWith({
+            assert(snap._request.calledWith({
                 uri: 'snaps/some-snap/conf',
                 method: 'PUT',
                 body: config           
