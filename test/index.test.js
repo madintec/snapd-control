@@ -12,7 +12,6 @@ const http = require('http')
 
 const { Readable } = require('stream')
 
-
 const makeFakeFetch = value => sinon.fake.returns(Promise.resolve({
     json: () => Promise.resolve(value)
 }))
@@ -48,35 +47,6 @@ describe('Snapd', () => {
             }))
         })
 
-        // it('should pre-configure request', () => {
-        //     const fetch = sinon.fake()
-        //     sinon.replace(fetch, fakeReq)
-
-        //     // Some custom settings
-        //     const settings = {
-        //         socketPath: '/path/to/socket',
-        //         version: 3,
-        //         allowInteraction: false
-        //     }
-
-        //     // Corresponding baseUrl
-        //     const baseUrl = 'http://unix:/path/to/socket:/v3/'
-
-        //     const snap = new Snapd(settings)
-
-        //     expect(fakeReq.callCount).to.equal(1)
-        //     expect(fakeReq.lastCall.args.length).to.equal(1)
-        //     expect(fakeReq.lastCall.args[0]).to.eql({
-        //         baseUrl,
-        //         headers: {
-        //             'Host': '',
-        //             'X-Allow-Interaction': settings.allowInteraction
-        //         },
-        //         json: true,
-        //         simple: false,
-        //         transform: snap._handleResponse
-        //     })
-        // })
     })
 
     describe('Snapd -> _request',  () => {
@@ -95,15 +65,73 @@ describe('Snapd', () => {
                 fetchFunction: fakeFetch
             }
 
+            const expectedUrl = new URL('http://0.0.0.0/v3/snap/whatever')
+            const snap = new Snapd(settings)
+            
+            snap._request({
+                uri: 'snap/whatever'
+            })
+            .then(() => {
+                const callArgs = fakeFetch.getCall(0).args
+                expect(callArgs).to.be.an('array').lengthOf(2)
+                expect(callArgs[0]).to.eql(expectedUrl)
+                done()
+            })
+            .catch(done)
+        })
+
+        it('should call fetch with custom headers', (done) => {
+            const fakeFetch = makeFakeFetch({})
+            // Some custom settings
+            const settings = {
+                version: 3,
+                fetchFunction: fakeFetch
+            }
+
             const snap = new Snapd(settings)
 
             snap._request({
                 uri: 'snap/whatever'
             })
             .then(() => {
-                expect(fakeFetch.calledOnceWith('http://0.0.0.0?snap/whatever'))
+                const callArgs = fakeFetch.getCall(0).args
+                expect(callArgs).to.be.an('array').lengthOf(2)
+                expect(callArgs[1].headers)
+                    .to.eql({
+                        'Host': '',
+                        'X-Allow-Interaction': false
+                    })
                 done()
+            }).catch(done)
+        })
+
+        it('should call fetch with the computed querystring', (done) => {
+            const fakeFetch = makeFakeFetch({})
+            // Some custom settings
+            const settings = {
+                version: 3,
+                fetchFunction: fakeFetch
+            }
+
+            const snap = new Snapd(settings)
+
+            const qs = {
+                test: "value"
+            }
+
+            const expectedQuery = '?test=value'
+
+            snap._request({
+                uri: 'snap/whatever',
+                qs
             })
+            .then(() => {
+                const callArgs = fakeFetch.getCall(0).args
+                expect(callArgs).to.be.an('array').lengthOf(2)
+                expect(callArgs[0].search.toString())
+                    .to.eql(expectedQuery)
+                done()
+            }).catch(done)
         })
 
     })
