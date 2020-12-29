@@ -6,6 +6,7 @@
 const { expect, assert } = require('chai')
 const fetch = require('node-fetch')
 const sinon = require('sinon')
+const FormData = require('form-data')
 const Snapd = require('../src/index')
 
 const http = require('http')
@@ -183,7 +184,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'system-info'
             }))
 
@@ -201,7 +202,7 @@ describe('Snapd', () => {
             snap.changes(0)
                 .then(done)
                 .catch(done)
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'changes/0'
             }))
 
@@ -216,7 +217,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({uri: 'changes'}))
+            expect(snap._request.getCall(0).args[0]).to.eql(({uri: 'changes'}))
 
         })
 
@@ -240,7 +241,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'find',
                 qs: options
             }))
@@ -262,7 +263,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps',
                 qs: {}
             }))
@@ -282,7 +283,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps',
                 qs: {
                     snaps: options.snaps
@@ -304,7 +305,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
             
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps',
                 qs: {
                     snaps: 'snap-name,other-snap-name'
@@ -326,7 +327,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps',
                 qs: {
                     select: options.select
@@ -348,7 +349,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/snapName'
             }))
 
@@ -369,7 +370,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'interfaces'
             }))
 
@@ -391,7 +392,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -415,7 +416,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -443,7 +444,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -467,7 +468,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'interfaces',
                 method: 'POST',
                 body: {
@@ -493,7 +494,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'apps',
                 qs: {
                     select: 'service'
@@ -517,7 +518,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -542,7 +543,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -568,7 +569,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -593,7 +594,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -619,7 +620,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -644,7 +645,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'apps',
                 method: 'POST',
                 body: {
@@ -671,7 +672,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'logs',
                 qs: {
                     names: serviceName
@@ -695,7 +696,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'logs',
                 qs: {
                     names: options.names,
@@ -717,10 +718,10 @@ describe('Snapd', () => {
             const snapName = 'some-snap'
 
             snap.install(snapName)
-            .then(done)
-            .catch(done)
+                .then(done)
+                .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -745,7 +746,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -761,77 +762,40 @@ describe('Snapd', () => {
 
             sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
 
-            const snapFile = new Readable()
-
-            const options = {
-                filename: 'unused-filename.snap'
-            }
-
-            snap.install(snapFile, options)
-            .then(done)
-            .catch(done)
-
-            assert(snap._request.calledWith({
-                uri: 'snaps',
-                method: 'POST',
-                formData: {
-                    action: 'install',
-                    snap: {
-                        value: snapFile,
-                        options: {
-                            filename: options.filename
-                        }
-                    },
-                    dangerous: undefined,
-                    devmode: undefined,
-                    'snap-path': undefined,
-                    jailmode: undefined,
-                    classic: undefined
-                }
-            }))
-
-        })
-
-        it('should convert truthy booleans to strings', done => {
-            const snap = new Snapd()
-
-            sinon.replace(snap, '_request', sinon.fake.returns(Promise.resolve()))
-
-            const snapFile = new Readable()
+            const snapFile = Buffer.from('123')
 
             const options = {
                 filename: 'unused-filename.snap',
-                devmode: true,
-                dangerous: true,
-                classic: true,
-                jailmode: true
+                contentType: 'test/test'
             }
+            const expected = new FormData()
+            expected.append('action', 'install')
+            
+            // expected.append('devmode', 'true')
+            // expected.append('dangerous', 'true')
+            // expected.append('classic', 'true')
+            // expected.append('jailmode', 'true')
+            // expected.append('snap-path', options.snapPath)
+
+            expected.append('snap', snapFile, {
+                filename: options.filename,
+                contentType: options.contentType
+            })
 
             snap.install(snapFile, options)
-            .then(done)
-            .catch(done)
+                .then(() => {
+                    const cfg = snap._request.getCall(0).args[0]
+                    expect(cfg.uri).to.equal('snaps')
+                    expect(cfg.method).to.equal('POST')
 
-            assert(snap._request.calledWith({
-                uri: 'snaps',
-                method: 'POST',
-                formData: {
-                    action: 'install',
-                    snap: {
-                        value: snapFile,
-                        options: {
-                            filename: options.filename
-                        }
-                    },
-                    dangerous: 'true',
-                    devmode: 'true',
-                    'snap-path': undefined,
-                    jailmode: 'true',
-                    classic: 'true'
-                }
-            }))
+                    const data = cfg.form
+                    expect(data.toString()).to.equal(expected.toString())
 
+                    done()
+                })
+                .catch(done)
         })
-        
+
     })
 
     describe('Snapd->refresh', () => {
@@ -844,10 +808,10 @@ describe('Snapd', () => {
             const snapName = 'some-snap'
 
             snap.refresh(snapName)
-            .then(done)
-            .catch(done)
+                .then(done)
+                .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -872,7 +836,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -897,7 +861,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -925,7 +889,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -951,7 +915,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -980,7 +944,7 @@ describe('Snapd', () => {
                 .then(done)
                 .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap-name',
                 method: 'POST',
                 body: {
@@ -1006,7 +970,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -1030,7 +994,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap',
                 method: 'POST',
                 body: {
@@ -1056,7 +1020,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap/conf',
                 method: 'GET',
                 qs: {
@@ -1078,7 +1042,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap/conf',
                 method: 'GET',
                 qs: {
@@ -1100,7 +1064,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap/conf',
                 method: 'GET',
                 qs: {
@@ -1128,7 +1092,7 @@ describe('Snapd', () => {
             .then(done)
             .catch(done)
 
-            assert(snap._request.calledWith({
+            expect(snap._request.getCall(0).args[0]).to.eql(({
                 uri: 'snaps/some-snap/conf',
                 method: 'PUT',
                 body: config           

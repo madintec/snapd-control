@@ -6,6 +6,7 @@
 const http = require('http')
 const fetch = require('node-fetch')
 const urljoin = require('url-join')
+const FormData = require('form-data')
 
 const defaultSettings = {
     socketPath: '/run/snapd.socket',
@@ -37,19 +38,33 @@ class Snapd {
             Snapd.baseUrl
         )
 
-        if(opts.qs){
-            url.search = new URLSearchParams(opts.qs)
-        }
-
-        return this.settings.fetchFunction(url, {
+        const fetchOptions = {
             agent: this._agent,
             headers: {
                 'Host': '',
                 'X-Allow-Interaction': this.settings.allowInteraction
-            },
-        })
-        .then(res => res.json())
-        .then(this._handleResponse)
+            }
+        }
+
+        if(opts.qs){
+            url.search = new URLSearchParams(opts.qs)
+        }
+
+        if(opts.body){
+            fetchOptions.body = opts.body
+        }
+
+        if(opts.form){
+            Object.assign(
+                fetchOptions.headers,
+                opts.form.getHeaders()
+            )
+            fetchOptions.body = opts.form
+        }
+
+        return this.settings.fetchFunction(url, fetchOptions)
+            .then(res => res.json())
+            .then(this._handleResponse)
     }
 
     // Simply throw on snap response error
@@ -229,25 +244,39 @@ class Snapd {
         // Try to sideload snap in form data otherwise
         } else {
 
+            const form = new FormData()
+            form.append('action', 'install')
+
+            if(options.devmode){
+                form.append('devmode', 'true')
+            }
+
+            if(options.dangerous){
+                form.append('dangerous', 'true')
+            }
+
+            if(options.classic){
+                form.append('classic', 'true')
+            }
+
+            if(options.jailmode){
+                form.append('jailmode', 'true')
+            }
+
+            if(options.snapPath){
+                form.append('snap-path', options.snapPath)
+            }
+
+            form.append('snap', snap, {
+                filename: options.filename,
+                contentType: options.contentType,
+                knownLength: options.knownLength
+            })
+
             return this._request({
                 uri: 'snaps',
                 method: 'POST',
-                formData: {
-                    action: 'install',
-                    snap: {
-                        value: snap,
-                        options: {
-                            filename: options.filename,
-                        }
-                    },
-                    'snap-path': options.snapPath,
-
-                    // FormData doesn't like booleans
-                    devmode: options.devmode ? 'true' : undefined,
-                    dangerous: options.dangerous ? 'true' : undefined,
-                    classic: options.classic ? 'true' : undefined,
-                    jailmode: options.jailmode ? 'true' : undefined,
-                }
+                form
             })
 
         }
