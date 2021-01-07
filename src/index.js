@@ -40,6 +40,7 @@ class Snapd {
 
         const fetchOptions = {
             agent: this._agent,
+            method: opts.method || 'GET',
             headers: {
                 'Host': '',
                 'X-Allow-Interaction': this.settings.allowInteraction
@@ -51,7 +52,7 @@ class Snapd {
         }
 
         if(opts.body){
-            fetchOptions.body = opts.body
+            fetchOptions.body = JSON.stringify(opts.body)
         }
 
         if(opts.form){
