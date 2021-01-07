@@ -3,12 +3,16 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-const rp = require('request-promise-any')
+const http = require('http')
+const fetch = require('node-fetch')
+const urljoin = require('url-join')
+const FormData = require('form-data')
 
 const defaultSettings = {
     socketPath: '/run/snapd.socket',
     version: '2',
-    allowInteraction: false
+    allowInteraction: false,
+    fetchFunction: fetch
 }
 
 class Snapd {
@@ -18,17 +22,50 @@ class Snapd {
             ...settings
         }
 
-        // Pre-configure request function
-        this.request = rp.defaults({
-            baseUrl: `http://unix:${this.settings.socketPath}:/v${this.settings.version}/`,
+        this._agent = new http.Agent({
+            socketPath: this.settings.socketPath
+        })
+    }
+
+    static baseUrl = `http://0.0.0.0`
+
+    _request(opts){
+        const url = new URL(
+            urljoin(
+                `v${this.settings.version}`,
+                opts.uri
+            ),
+            Snapd.baseUrl
+        )
+
+        const fetchOptions = {
+            agent: this._agent,
+            method: opts.method || 'GET',
             headers: {
                 'Host': '',
                 'X-Allow-Interaction': this.settings.allowInteraction
-            },
-            json: true,
-            simple: false,
-            transform: this._handleResponse
-        })
+            }
+        }
+
+        if(opts.qs){
+            url.search = new URLSearchParams(opts.qs)
+        }
+
+        if(opts.body){
+            fetchOptions.body = JSON.stringify(opts.body)
+        }
+
+        if(opts.form){
+            Object.assign(
+                fetchOptions.headers,
+                opts.form.getHeaders()
+            )
+            fetchOptions.body = opts.form
+        }
+
+        return this.settings.fetchFunction(url, fetchOptions)
+            .then(res => res.json())
+            .then(this._handleResponse)
     }
 
     // Simply throw on snap response error
@@ -44,45 +81,46 @@ class Snapd {
 
     // Change method is to be used for async requests
     changes(id){
-        return this.request({
+        return this._request({
             uri: `changes${typeof id !== 'undefined' ? '/'+id : ''}`
         })
     }
 
     systemInfo(){
-        return this.request({
+        return this._request({
             uri: 'system-info'
         })
     }
 
-    find({
-        q,
-        name,
-        section,
-        select,
-    }){
-        return this.request({
+    find(opts){
+        return this._request({
             uri: 'find',
-            qs: {
-                q, name, section, select
-            }
+            qs: opts
         })
     }
 
     list(options={}){
-        return this.request({
+        const qs = {}
+
+        if(options.select){
+            qs.select = options.select
+        }
+        
+        if(options.snaps){
+            qs.snaps = Array.isArray(options.snaps)
+                ? options.snaps.join(',')
+                : options.snaps
+        }
+        return this._request({
             uri: 'snaps',
-            qs: {
-                select: options.select,
-                snaps: Array.isArray(options.snaps) ? options.snaps.join(',') : options.snaps
-            }
+            qs
         })
     }
 
     // Snap management
 
     info(snap){
-        return this.request({
+        return this._request({
             uri: `snaps/${snap}`
         })
     }
@@ -91,14 +129,14 @@ class Snapd {
 
     // Retrieve interfaces list
     interfaces(){
-        return this.request({
+        return this._request({
             uri: 'interfaces'
         })
     }
 
     // Connect plugs & slots
     connect(slots, plugs){
-        return this.request({
+        return this._request({
             uri: 'interfaces',
             method: 'POST',
             body: {
@@ -111,7 +149,7 @@ class Snapd {
 
     // Disconnect plugs & slots
     disconnect(slots, plugs){
-        return this.request({
+        return this._request({
             uri: 'interfaces',
             method: 'POST',
             body: {
@@ -126,7 +164,7 @@ class Snapd {
 
     // List available services
     services(){
-        return this.request({
+        return this._request({
             uri: 'apps',
             qs: {
                 'select': 'service'
@@ -136,7 +174,7 @@ class Snapd {
 
     // Start a service
     start(service){
-        return this.request({
+        return this._request({
             uri: 'apps',
             method: 'POST',
             body: {
@@ -148,7 +186,7 @@ class Snapd {
 
     // Stop a service
     stop(service){
-        return this.request({
+        return this._request({
             uri: 'apps',
             method: 'POST',
             body: {
@@ -160,7 +198,7 @@ class Snapd {
 
     // Restart a service
     restart(service){
-        return this.request({
+        return this._request({
             uri: 'apps',
             method: 'POST',
             body: {
@@ -173,14 +211,14 @@ class Snapd {
     // Get service logs
     logs(options){
         if(typeof options === 'string') {
-            return this.request({
+            return this._request({
                 uri: 'logs',
                 qs: {
                     names: options
                 }
             })
         } else {
-            return this.request({
+            return this._request({
                 uri: 'logs',
                 qs: {
                     names: options.names,
@@ -195,7 +233,7 @@ class Snapd {
         // Use traditionnal snap store if snap argument is a string
         if(typeof snap === 'string'){
 
-            return this.request({
+            return this._request({
                 uri: `snaps/${snap}`,
                 method: 'POST',
                 body: {
@@ -207,32 +245,46 @@ class Snapd {
         // Try to sideload snap in form data otherwise
         } else {
 
-            return this.request({
+            const form = new FormData()
+            form.append('action', 'install')
+
+            if(options.devmode){
+                form.append('devmode', 'true')
+            }
+
+            if(options.dangerous){
+                form.append('dangerous', 'true')
+            }
+
+            if(options.classic){
+                form.append('classic', 'true')
+            }
+
+            if(options.jailmode){
+                form.append('jailmode', 'true')
+            }
+
+            if(options.snapPath){
+                form.append('snap-path', options.snapPath)
+            }
+
+            form.append('snap', snap, {
+                filename: options.filename,
+                contentType: options.contentType,
+                knownLength: options.knownLength
+            })
+
+            return this._request({
                 uri: 'snaps',
                 method: 'POST',
-                formData: {
-                    action: 'install',
-                    snap: {
-                        value: snap,
-                        options: {
-                            filename: options.filename,
-                        }
-                    },
-                    'snap-path': options.snapPath,
-
-                    // FormData doesn't like booleans
-                    devmode: options.devmode ? 'true' : undefined,
-                    dangerous: options.dangerous ? 'true' : undefined,
-                    classic: options.classic ? 'true' : undefined,
-                    jailmode: options.jailmode ? 'true' : undefined,
-                }
+                form
             })
 
         }
     }
 
     refresh(name, options={}){
-        return this.request({
+        return this._request({
             uri: `snaps/${name}`,
             method: 'POST',
             body: {
@@ -243,7 +295,7 @@ class Snapd {
     }
 
     remove(name, options={}){
-        return this.request({
+        return this._request({
             uri: `snaps/${name}`,
             method: 'POST',
             body: {
@@ -255,7 +307,7 @@ class Snapd {
     }
 
     revert(name, options={}){
-        return this.request({
+        return this._request({
             uri: `snaps/${name}`,
             method: 'POST',
             body: {
@@ -267,7 +319,7 @@ class Snapd {
     }
 
     enable(name){
-        return this.request({
+        return this._request({
             uri: `snaps/${name}`,
             method: 'POST',
             body: {
@@ -277,7 +329,7 @@ class Snapd {
     }
 
     disable(name){
-        return this.request({
+        return this._request({
             uri: `snaps/${name}`,
             method: 'POST',
             body: {
@@ -289,7 +341,7 @@ class Snapd {
     // Snap configuration methods
 
     get(name, keys){
-        return this.request({
+        return this._request({
             uri: `snaps/${name}/conf`,
             method: 'GET',
             qs: {
@@ -299,7 +351,7 @@ class Snapd {
     }
 
     set(name, configuration){
-        return this.request({
+        return this._request({
             uri: `snaps/${name}/conf`,
             method: 'PUT',
             body: configuration
